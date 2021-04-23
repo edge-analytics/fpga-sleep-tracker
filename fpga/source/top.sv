@@ -31,7 +31,8 @@ logic [7:0] predicted_class;
 //accel_data_t accel_data;
 //logic signed [7:0] accel_z;
 logic [7:0] count_feature;
-//logic accel_valid, count_valid;
+//logic accel_valid;
+logic count_valid;
 //assign accel_z = accel_data.z[11:4];
 
 // Host to target Fifo signals
@@ -57,17 +58,31 @@ uart #(.BAUD_DIV(52), .RX_SAMPLE_OFFSET(26)) uart_rs232
 );
 
 // ~17 hours of recording time at 1 sample per 15 secs
-fifo_256k #(.NUM_ELEMENTS(4096)) target_to_host_fifo
-(
-    .*,
-    .input_valid(fifo_input_valid),
-    .data_in(fifo_input_data),
-    .ready_for_input(fifo_ready_for_input),
-    .fifo_empty(fifo_empty),
-    .output_valid(fifo_output_valid),
-    .data_out(fifo_output_data),
-    .ready_for_output(fifo_ready_for_output)
-);
+// `ifdef SIM
+    fifo_ebr #(.NUM_ELEMENTS(4096)) target_to_host_fifo
+    (
+        .*,
+        .input_valid(fifo_input_valid),
+        .data_in(fifo_input_data),
+        .ready_for_input(fifo_ready_for_input),
+        .fifo_empty(fifo_empty),
+        .output_valid(fifo_output_valid),
+        .data_out(fifo_output_data),
+        .ready_for_output(fifo_ready_for_output)
+    );
+// `else
+//     fifo_256k #(.NUM_ELEMENTS(4096)) target_to_host_fifo
+//     (
+//         .*,
+//         .input_valid(fifo_input_valid),
+//         .data_in(fifo_input_data),
+//         .ready_for_input(fifo_ready_for_input),
+//         .fifo_empty(fifo_empty),
+//         .output_valid(fifo_output_valid),
+//         .data_out(fifo_output_data),
+//         .ready_for_output(fifo_ready_for_output)
+//     );
+// `endif
 
 // accel_sampler accel_sampler_inst(
 //     .*,

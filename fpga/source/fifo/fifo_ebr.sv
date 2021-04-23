@@ -6,6 +6,7 @@ module fifo_ebr
     input logic input_valid,
     input logic[DATA_WIDTH-1:0] data_in,
     output logic ready_for_input,
+    output logic fifo_empty,
     output logic output_valid,
     output logic[DATA_WIDTH-1:0] data_out,
     input logic ready_for_output
@@ -28,6 +29,7 @@ logic empty, full, qualified_write, qualified_read;
 assign qualified_read = ready_for_output & ~empty;
 assign qualified_write = input_valid & ~full;
 assign ready_for_input = ~full;
+assign fifo_empty = empty;
 
 always_ff @ (posedge clk) begin
     if (reset) begin

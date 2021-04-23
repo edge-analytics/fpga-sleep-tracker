@@ -15,9 +15,6 @@ import nn_pkg::*;
     input logic tx_ready_i,
     input logic rx_ready_i,
 
-    // System signals
-    output logic start_acquisition,
-
     // NN signals
     output logic[$clog2(MAX_LAYER_DEPTH)-1:0] o_nn_addr,
     output logic signed[INPUT_DATA_WIDTH-1:0] o_nn_data,
@@ -62,7 +59,7 @@ logic[$clog2(REG_MAP_BYTES)-1:0] reg_map_addr;
 logic[7:0] reg_map_din, reg_map_dout, count_feature_capture;
 
 // NN signals
-logic [$clog2(NN_INPUTS)-1:0] nn_input_idx;
+logic [$clog2(NN_INPUTS):0] nn_input_idx;
 logic signed[OUTPUT_DATA_WIDTH-1:0] i_nn_data_capture;
 logic handshake_empty;
 
@@ -527,6 +524,8 @@ always_comb begin
             end
         end
         STORE_NN_INPUT_IP: begin
+            /* verilator lint_off UNSIGNED */
+            // linter directive required if NN_INPUTS=1
             if (nn_input_idx < NN_INPUTS - 'd1) begin
                 nn_next_state = STORE_NN_INPUT_IP;
             end

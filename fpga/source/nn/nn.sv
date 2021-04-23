@@ -79,15 +79,15 @@ logic signed [OUTPUT_DATA_WIDTH-1:0] curr_layer_din, curr_layer_dout,
 next_layer_din, next_layer_dout, neuron_output, max_output;
 
 // Component instantiations
-nn_weights nn_weights_inst(
+rom #(.NUM_ELEMENTS(NUM_WEIGHTS), .DATA_WIDTH(PARAM_WIDTH), .MIF_PATH({PARAM_MIF_PATH, "weights.mif"})) nn_weights_inst(
     .clk(clk),
-    .i_index(weight_idx),
-    .o_weight(weight_ji)
+    .i_addr(weight_idx),
+    .o_data(weight_ji)
 );
-nn_biases nn_biases_inst(
+rom #(.NUM_ELEMENTS(NUM_BIASES), .DATA_WIDTH(PARAM_WIDTH), .MIF_PATH({PARAM_MIF_PATH, "biases.mif"})) nn_biases_inst(
     .clk(clk),
-    .i_index(bias_idx),
-    .o_bias(bias_b)
+    .i_addr(bias_idx),
+    .o_data(bias_b)
 );
 sp_ram #(.DATA_WIDTH(OUTPUT_DATA_WIDTH), .MEM_SIZE(MAX_LAYER_DEPTH)) current_layer_mem
 (

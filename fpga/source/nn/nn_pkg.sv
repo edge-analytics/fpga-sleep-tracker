@@ -13,7 +13,7 @@ localparam OUTPUT_Q_FRAC = OUTPUT_DATA_WIDTH - OUTPUT_Q_INT;
 localparam PARAM_WIDTH = 16;
 localparam PARAM_Q_INT = 2;
 localparam PARAM_Q_FRAC = PARAM_WIDTH - PARAM_Q_INT;
-
+localparam PARAM_MIF_PATH = "/Users/rbk/consulting/edge-analytics/fpga-sleep-tracker/fpga/source/nn/";
 localparam NUM_LAYERS = 5;
 localparam MAX_LAYER_DEPTH = 15;
 localparam NN_INPUTS = 1;

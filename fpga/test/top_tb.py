@@ -1,14 +1,21 @@
 import cocotb
 from cocotb.triggers import Timer
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, FallingEdge, ClockCycles
+from cocotb.triggers import RisingEdge, ClockCycles
 from cocotb.binary import BinaryValue
-from cocotb.handle import Force, Release
 import numpy as np
 from dataclasses import dataclass
+from enum import Enum
 from fixedpoint import FixedPoint
+from typing import List
 
 POWER_ON_RESET_DELAY_NS = 2000
+
+
+class SleepWake(Enum):
+    WAKE = 0
+    SLEEP = 1
+
 
 @dataclass
 class PacketDelay:
@@ -49,7 +56,7 @@ class SimAccelerometer:
     async def simulate(self):
         for z in self.z_data: 
             await self._wait_next_sample()
-            self.accel_z <= BinaryValue(str(FixedPoint(float(z/5), 1, 7)))
+            self.accel_z <= BinaryValue(str(FixedPoint(z/5, signed=True, m=1, n=7, str_base=2)))
             self.accel_valid <= 1
             await ClockCycles(self.clk, 1)
             self.accel_z <= 0
@@ -76,16 +83,17 @@ class Rs232:
             await RisingEdge(self.clk)
             wait_for_trigger = not signal.value == trigger_value
 
-    async def _receive(self):
+    async def _receive(self, recieve_data):
         while True:
-            recieve_data = []
             await self._wait_for_signal_level(self.rx, 0) # Start bit
             await self._wait_half_baud_period()
+            rx_byte = []
             for _ in range(self.BITS):
                 await self._wait_baud_period()
-                recieve_data.append(self.rx.value)
+                rx_byte.append(self.rx.value)
             await self._wait_baud_period() # Stop bit
-            print(f"RS232 Received Data {self.rx_count} Value: {recieve_data}")
+            print(f"RS232 Received Data {self.rx_count} Value: {rx_byte}")
+            recieve_data.append(rx_byte)
             self.rx_count += 1
 
     async def _wait_baud_period(self):
@@ -114,12 +122,19 @@ class Rs232:
                     print(f"RS232 Transmitted Data {self.tx_count} Value: {byte}")
                     self.tx_count += 1 
     
-    async def simulate(self):
+    async def simulate(self, rx_data=[]):
+        global rx
+        rx = rx_data
         print("Starting RS232 Simulation")
         await Timer(POWER_ON_RESET_DELAY_NS, units='ns')
-        cocotb.fork(self._receive())
+        cocotb.fork(self._receive(rx))
         cocotb.fork(self._send(packets=TEST_PACKETS))
 
+
+def bitlist_to_int(x: List[int]) -> int:
+    s = [str(xi) for xi in x]
+    s.reverse()
+    return int("".join(s), 2)
 
 @cocotb.test()
 def test_top(dut):
@@ -127,14 +142,14 @@ def test_top(dut):
     dut._log.info("Running test!")
 
     # Load simulation data
-    data = np.loadtxt('featurize/actigraphy_counts/46343_acceleration.txt', delimiter=' ')
+    data = np.loadtxt('../../data/sleep_wake_classifier/46343_acceleration.txt', delimiter=' ')
     fs = 50
     time = np.arange(np.amin(data[:, 0]), np.amax(data[:, 0]), 1.0 / fs)
     z_data = np.interp(time, data[:, 0], data[:, 3])
     accelerated_fs = fs * 10000
     
     # Simulation time parameters
-    top_clock_rate = 6000000  # Will actually be 6MHz, but HSOSC model is wrong
+    top_clock_rate = 6000000
     ns_per_sec = 1e9
     clk_period_ns = int((1/top_clock_rate)*ns_per_sec)
 
@@ -146,7 +161,8 @@ def test_top(dut):
    
     accel_sim = cocotb.fork(accelerometer.simulate())
     cocotb.fork(Clock(dut.clk, clk_period_ns, units='ns').start())
-    rs232_sim = cocotb.fork(rs232_modem.simulate())
+    rx_bytes = []
+    rs232_sim = cocotb.fork(rs232_modem.simulate(rx_bytes))
     dut.reset <= 0
     yield RisingEdge(dut.clk)
     dut.reset <= 1
@@ -156,3 +172,14 @@ def test_top(dut):
     yield Timer(30000000, units='ns')
     rs232_sim.kill()
     accel_sim.kill()
+    
+    # Received data is a list of bytes where the ordering is counts, prediction, counts, prediction...
+    rx = [bitlist_to_int(byte) for byte in rx_bytes]
+    correct_labels = [SleepWake.SLEEP.value, SleepWake.SLEEP.value]
+    predictions =  rx[1::2]
+    counts = rx[::2]
+    for i, (c, p) in enumerate(zip(counts, predictions)):
+        sleep_wake_str = "awake" if p == 0 else "sleep" 
+        print(f"Epoch {i}: counts {c}, prediction {sleep_wake_str}")
+    
+    assert correct_labels == predictions

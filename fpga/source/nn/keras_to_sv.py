@@ -31,6 +31,8 @@ def parse_keras_model(keras_h5_path: str, output_directory: str, param_m: int, p
 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
+    
+    abs_out_dir = os.path.abspath(output_directory)
 
     model = keras.models.load_model(keras_h5_path)
     biases = open(os.path.join(output_directory, "biases.mif"), 'w')
@@ -78,6 +80,7 @@ def parse_keras_model(keras_h5_path: str, output_directory: str, param_m: int, p
         num_biases=str(num_biases),
         param_width=str(param_m + param_n),
         param_q_int=str(param_m),
+        nn_gen_dir=f"\"{abs_out_dir}/\";",
         num_layers=str(num_layers),
         max_layer_depth=str(max(neurons_per_layer)),
         nn_inputs=str(num_inputs),
@@ -100,6 +103,7 @@ def parse_keras_model(keras_h5_path: str, output_directory: str, param_m: int, p
     print(f"num neurons per layer {neurons_per_layer}")
     print(f'num layers {num_layers}')
     print(f"max layer depth {max(neurons_per_layer)}")
+    print(f"\nGenerated files located at:\n {abs_out_dir}")
 
 
 def _get_nn_pkg_template() -> Template:
@@ -118,7 +122,7 @@ localparam OUTPUT_Q_FRAC = OUTPUT_DATA_WIDTH - OUTPUT_Q_INT;
 localparam PARAM_WIDTH = $param_width;
 localparam PARAM_Q_INT = $param_q_int;
 localparam PARAM_Q_FRAC = PARAM_WIDTH - PARAM_Q_INT;
-
+localparam PARAM_MIF_PATH = $nn_gen_dir
 localparam NUM_LAYERS = $num_layers;
 localparam MAX_LAYER_DEPTH = $max_layer_depth;
 localparam NN_INPUTS = $nn_inputs;
