@@ -1,14 +1,20 @@
-# Sleep Tracker FPGA implementation
-TBD
+# Sleep Tracker FPGA Overview
+We did our initial prototyping and deployment work with the [iCE40 UltraPlus MDP](https://www.latticesemi.com/en/Products/DevelopmentBoardsAndKits/iCE40UltraPlusMobileDevPlatform). This development platform was ideal since we had access to the LIS2D12 accelerometer to use for the actigraphy calculations required by the sleep tracker classifier. The iCE40UP5K had sufficient on chip Embedded Block RAM (EBR) 120Kb to deploy small neural net models with less than 5K parameters. We used the EBRs to store the parameters since memory initialization files allowed the parameters to be loaded on device initialization. We additionally used the onboard 256Kb SRAM to log the actigraphy counts and sleep, wake predictions to perform validation of the trained model on the deployed system.
 
-## Sleep Tracker FPGA Block Diagram
-TBD
+## Sleep Tracker Testing
+To run the top level testbench for the sleep tracker fpga code you must first generate the System Verilog dependencies from the provided [Keras model parser](source/nn/keras_to_sv.py).
+```
+cd source/nn
+python keras_to_sv.py -i ../../../models/sleep_wake.h5 -o ./
+```
+
+After these dependencies have been created you can navigate to the test directory and run make which will execute the cocotb [top_tb.py](test/top_tb.py) testbench.
+
+![](../fpga/doc/img/top_testbench.png)
 
 ### NN Block Diagram
-TBD
 
-![NN Memory Organization](doc/img/memory_org.png)
-
+![](doc/img/memory_org.png)
 
 
 ### Verilator Cocotb Requirements
@@ -33,10 +39,10 @@ pip install cocotb
 
 ## Pinouts
 ### HW-USBN-2B Pinout
-![HW-USBN-2B Pinout](doc/img/usbn_pinout.png)
+![](doc/img/usbn_pinout.png)
 
 ### iCE40 UltraPlus Mobile Development Pinout - FPGA C
-![iCE40 MDP Pinout](doc/img/ice40_mobile_fpga_c.png)  
+![](doc/img/ice40_mobile_fpga_c.png)  
 &nbsp;
 
 ### Suggested JTAG Pin Mapping
@@ -63,65 +69,21 @@ set_false_path -from {mytck} -to {clk}
 set_false_path -from {clk} -to {mytck}
 ```
 
-## Reveal Module Insertion
-TODO
-
 ## Running Reveal Session
 1. Compile and export bin file in radiant
 2. Open Reveal Analyzer Startup Wizard
 - Create a new file
 - Detect USB Port
-  - Select LATTICE HW-USBN-2B CH A Location 2
+  - Select LATTICE HW-USBN-2B
 - Select RVL source 
 
 
 ## UART Pin Constraints
 
-The mobile development platform has a FT223H USB to uart chip. Based on the mapping
-on the PCB the UART_RX_C next should be used to connect into the FPGA uart receive rx signal;
-This is Pin A2 for FPGA_C. Pin A1 should be connected to the uart tx output from the FPGA
-toplevel module. The constraints to do this is shown below.
-
+The mobile development platform has a FT223H USB to uart chip. Based on the mapping on the PCB the UART_RX_C next should be used to connect into the FPGA uart receive rx signal; This is Pin A2 for FPGA_C. Pin A1 should be connected to the uart tx output from the FPGA toplevel module. The constraints to do this is shown below.
 
 ```
 ldc_set_port -iobuf {PULLMODE=100K} [get_ports rx]
 ldc_set_location -site {A1} [get_ports tx]
 ldc_set_location -site {A2} [get_ports rx]
 ```
-
-## Host FPGA protocol example
-```
-import serial
-ser = serial.Serial("/dev/tty.usbserial-14601", 115200, timeout=1)
-# Write to regmap at offset 4, 4 bytes [1,2,3,4]
-write_packet = bytearray(b'\x84\x04\x00\x01\x02\x03\x04')
-ser.write(write_packet)
-# Read back 4 bytes from offset 4
-read_packet = bytearray(b'\x04\x04\x00')
-ser.write(read_packet)
-ser.read(4) =>
-b'\x01\x02\x03\x04'
-```
-
-In [2]: import serial
-   ...: ser = serial.Serial("/dev/cu.usbserial-145201", 115200, timeout=1)
-
-In [3]: def start():
-   ...:     ser.write(bytes([129,128,0,128]))
-   ...:
-
-In [4]: def stop():
-   ...:     ser.write(bytes([129,128,0,0]))
-   ...:
-
-In [5]: def read_fifo(num_elem):
-   ...:     nb = bytes(num_elem)
-   ...:     print(int(nb[0]))
-   ...:     #ser.write(bytes([64,num_elem,0]))
-   ...:
-
-In [21]: def read_fifo(num_elem):
-    ...:     # only supports < 256
-    ...:     ser.write(bytes([64,num_elem,0]))
-    ...:     sleep(0.25)
-    ...:     return ser.read(num_elem)
