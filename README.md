@@ -1,6 +1,6 @@
 # FPGA Acceleration at the Edge
 
-This repo is featured in an Edge Analytics blog post. Take a look for a high-level description of the motivation for this work.
+This repo is featured in an [Edge Analytics blog post](https://medium.com/edge-analytics/neural-network-on-the-tip-of-a-pencil-efd4c83ed36c). Take a look for a high-level description of the motivation for this work.
 
 We are interested in HW accelerators at the edge, especially FPGAs. Development and deployment of non-CPU hardware is relatively high friction, particularly for software engineers and data scientists with limited experience with hardware, digital design, and HW accelerator-specific tooling. Ultimately, this is a big barrier for many teams that would otherwise greatly benefit from using FPGAs or other HW accelerators.
 
